@@ -62,7 +62,7 @@ const processEvent = async (input: Input, mysql: ServerlessMysql) => {
 		),
 	];
 	const userIdCriteria = `userId IN (${userIds.map(userId => escape(userId)).join(',')})`;
-	const linkWord = userIds.length > 0 ? 'OR ' : '';
+	const linkWord = userIds.length > 0 && userNames.length > 0 ? 'OR ' : '';
 	const userNameCriteria =
 		userNames.length > 0 ? `userName IN (${userNames.map(result => escape(result)).join(',')})` : '';
 	const existingQuery = `
