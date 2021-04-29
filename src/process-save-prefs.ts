@@ -9,7 +9,8 @@ export default async (event, context): Promise<any> => {
 	console.log('received event', event);
 	const events: readonly Input[] = (event.Records as any[])
 		.map(event => JSON.parse(event.body))
-		.reduce((a, b) => a.concat(b), []);
+		.reduce((a, b) => a.concat(b), [])
+		.filter(event => event);
 	// TODO: do some filtering to keep only the latest for a given userId or userName
 	const mysql = await getConnection();
 	const latestEvents = extractLatest(events);
@@ -31,7 +32,9 @@ const extractLatest = (events: readonly Input[]): readonly Input[] => {
 	const groupedByUserId = groupByFunction((event: Input) => event.userId)(events);
 	return Object.values(groupedByUserId)
 		.map((results: readonly Input[]) =>
-			[...results].sort((a: Input, b: Input) => b.lastUpdateDate.getTime() - a.lastUpdateDate.getTime()),
+			[...results].sort(
+				(a: Input, b: Input) => (b.lastUpdateDate?.getTime() ?? 0) - (a.lastUpdateDate?.getTime() ?? 0),
+			),
 		)
 		.map(results => results[0]);
 };
@@ -53,52 +56,53 @@ const processEvent = async (input: Input, mysql: ServerlessMysql) => {
 	);
 
 	const userIds = [...new Set(userMappingDbResults.map(result => result.userId).filter(userId => userId?.length))];
-	const userNames = [
-		...new Set(
-			userMappingDbResults
-				.map(result => result.userName)
-				.filter(userName => userName?.length)
-				.filter(userName => userName != '__invalid'),
-		),
-	];
-	const userIdCriteria = `userId IN (${userIds.map(userId => escape(userId)).join(',')})`;
-	const linkWord = userIds.length > 0 && userNames.length > 0 ? 'OR ' : '';
-	const userNameCriteria =
-		userNames.length > 0 ? `userName IN (${userNames.map(result => escape(result)).join(',')})` : '';
-	const existingQuery = `
-		SELECT id 
-		FROM user_prefs
-		WHERE ${userIdCriteria} ${linkWord} ${userNameCriteria}
-	`;
-	console.log('prepared query', existingQuery);
-	const existingDbResuls: readonly any[] = await mysql.query(existingQuery);
-	console.log(
-		'executed query',
-		existingDbResuls && existingDbResuls.length,
-		existingDbResuls && existingDbResuls.length > 0 && existingDbResuls[0],
-	);
-	const isExisting = existingDbResuls?.length > 0;
+	let existingUserId: string = null;
+	if (userIds.length > 0) {
+		const userNames = [...new Set(userMappingDbResults.map(result => result.userName))]
+			.filter(userName => userName != '__invalid')
+			.filter(userName => userName?.length && userName.length > 0);
+		const userIdCriteria = `userId IN (${userIds.map(userId => escape(userId)).join(',')})`;
+		const linkWord = userIds.length > 0 && userNames.length > 0 ? 'OR ' : '';
+		console.log('linkWork', linkWord, userIds, userNames);
 
-	const insertQuery = isExisting
-		? `
-		UPDATE user_prefs
-		SET 
-			userId = ${escape(input.userId)},
-			userName = ${escape(input.userName)},
-			lastUpdateDate = ${escape(new Date())},
-			prefs = ${escape(JSON.stringify(input.prefs))}
-		WHERE id = ${existingDbResuls[0].id};
-	`
-		: `
-		INSERT INTO user_prefs
-		(userId, userName, lastUpdateDate, prefs)
-		VALUES (
-			${escape(input.userId)},
-			${escape(input.userName)},
-			${escape(new Date())},
-			${escape(JSON.stringify(input.prefs))}
+		const userNameCriteria =
+			userNames.length > 0 ? `userName IN (${userNames.map(result => escape(result)).join(',')})` : '';
+		const existingQuery = `
+			SELECT id 
+			FROM user_prefs
+			WHERE ${userIdCriteria} ${linkWord} ${userNameCriteria}
+		`;
+		console.log('prepared query', existingQuery, userNames);
+		const existingDbResuls: readonly any[] = await mysql.query(existingQuery);
+		console.log(
+			'executed query',
+			existingDbResuls && existingDbResuls.length,
+			existingDbResuls && existingDbResuls.length > 0 && existingDbResuls[0],
 		);
-	`;
+		existingUserId = existingDbResuls?.length > 0 ? existingDbResuls[0].id : null;
+	}
+
+	const insertQuery =
+		existingUserId != null
+			? `
+				UPDATE user_prefs
+				SET 
+					userId = ${escape(input.userId)},
+					userName = ${escape(input.userName)},
+					lastUpdateDate = ${escape(new Date())},
+					prefs = ${escape(JSON.stringify(input.prefs))}
+				WHERE id = ${existingUserId};
+			`
+			: `
+				INSERT INTO user_prefs
+				(userId, userName, lastUpdateDate, prefs)
+				VALUES (
+					${escape(input.userId)},
+					${escape(input.userName)},
+					${escape(new Date())},
+					${escape(JSON.stringify(input.prefs))}
+				);
+			`;
 	console.log('prepared query', insertQuery);
 	const insertResults: readonly any[] = await mysql.query(insertQuery);
 	console.log(
