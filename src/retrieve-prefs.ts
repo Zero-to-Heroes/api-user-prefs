@@ -15,7 +15,6 @@ export default async (event): Promise<any> => {
 		FROM user_mapping
 		WHERE userId = ${escape(input.userId)} OR userName = ${input.userName ? escape(input.userName) : escape('__invalid__')}
 	`;
-	console.log('prepared query', userQuery);
 	const userMappingDbResults: readonly any[] = await mysql.query(userQuery);
 	console.log(
 		'executed query',
@@ -42,7 +41,6 @@ export default async (event): Promise<any> => {
 		.filter(userName => userName?.length && userName.length > 0);
 	const userIdCriteria = `userId IN (${userIds.map(userId => escape(userId)).join(',')})`;
 	const linkWord = userIds.length > 0 && userNames.length > 0 ? 'OR ' : '';
-	console.log('linkWork', linkWord, userIds, userNames);
 
 	const userNameCriteria =
 		userNames.length > 0 ? `userName IN (${userNames.map(result => escape(result)).join(',')})` : '';
@@ -51,15 +49,12 @@ export default async (event): Promise<any> => {
 		FROM user_prefs
 		WHERE ${userIdCriteria} ${linkWord} ${userNameCriteria}
 	`;
-	console.log('prepared query', existingQuery);
 	const results: readonly any[] = await mysql.query(existingQuery);
-	console.log('executed query', results && results.length, results && results.length > 0 && results[0]);
 	const result: any = results && results.length > 0 ? results[0] : null;
 	await mysql.end();
 
 	const stringResults = result?.prefs;
 	const gzippedResults = stringResults ? gzipSync(stringResults).toString('base64') : null;
-	console.log('compressed', stringResults?.length, gzippedResults?.length);
 	const response = {
 		statusCode: 200,
 		isBase64Encoded: true,

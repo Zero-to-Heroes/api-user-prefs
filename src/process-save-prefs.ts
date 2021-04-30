@@ -6,7 +6,6 @@ import { groupByFunction } from './db/utils';
 import { Input } from './sqs-event';
 
 export default async (event, context): Promise<any> => {
-	console.log('received event', event);
 	const events: readonly Input[] = (event.Records as any[])
 		.map(event => JSON.parse(event.body))
 		.reduce((a, b) => a.concat(b), [])
@@ -15,7 +14,6 @@ export default async (event, context): Promise<any> => {
 	const mysql = await getConnection();
 	const latestEvents = extractLatest(events);
 	for (const ev of latestEvents) {
-		console.log('processing event', ev);
 		await processEvent(ev, mysql);
 	}
 	const response = {
@@ -23,7 +21,6 @@ export default async (event, context): Promise<any> => {
 		isBase64Encoded: false,
 		body: null,
 	};
-	console.log('sending back success reponse');
 	await mysql.end();
 	return response;
 };
@@ -47,7 +44,6 @@ const processEvent = async (input: Input, mysql: ServerlessMysql) => {
 		FROM user_mapping
 		WHERE userId = ${escape(input.userId)} OR userName = ${input.userName ? escape(input.userName) : escape('__invalid__')}
 	`;
-	console.log('prepared query', userQuery);
 	const userMappingDbResults: readonly any[] = await mysql.query(userQuery);
 	console.log(
 		'executed query',
@@ -63,7 +59,6 @@ const processEvent = async (input: Input, mysql: ServerlessMysql) => {
 			.filter(userName => userName?.length && userName.length > 0);
 		const userIdCriteria = `userId IN (${userIds.map(userId => escape(userId)).join(',')})`;
 		const linkWord = userIds.length > 0 && userNames.length > 0 ? 'OR ' : '';
-		console.log('linkWork', linkWord, userIds, userNames);
 
 		const userNameCriteria =
 			userNames.length > 0 ? `userName IN (${userNames.map(result => escape(result)).join(',')})` : '';
@@ -72,7 +67,6 @@ const processEvent = async (input: Input, mysql: ServerlessMysql) => {
 			FROM user_prefs
 			WHERE ${userIdCriteria} ${linkWord} ${userNameCriteria}
 		`;
-		console.log('prepared query', existingQuery, userNames);
 		const existingDbResuls: readonly any[] = await mysql.query(existingQuery);
 		console.log(
 			'executed query',
@@ -103,7 +97,6 @@ const processEvent = async (input: Input, mysql: ServerlessMysql) => {
 					${escape(JSON.stringify(input.prefs))}
 				);
 			`;
-	console.log('prepared query', insertQuery);
 	const insertResults: readonly any[] = await mysql.query(insertQuery);
 	console.log(
 		'executed query',
