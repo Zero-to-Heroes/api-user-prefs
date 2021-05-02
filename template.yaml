@@ -28,7 +28,7 @@ Resources:
         Properties:
             Handler: retrieve-prefs.default
             Runtime: nodejs10.x
-            Timeout: 3
+            Timeout: 5
             MemorySize: 128
             CodeUri: ./dist/retrieve-prefs
             Policies:

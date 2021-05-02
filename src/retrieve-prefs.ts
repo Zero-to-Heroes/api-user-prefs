@@ -11,7 +11,7 @@ export default async (event): Promise<any> => {
 
 	const escape = SqlString.escape;
 	const userQuery = `
-		SELECT userId, userName
+		SELECT DISTINCT userId, userName
 		FROM user_mapping
 		WHERE userId = ${escape(input.userId)} OR userName = ${input.userName ? escape(input.userName) : escape('__invalid__')}
 	`;
