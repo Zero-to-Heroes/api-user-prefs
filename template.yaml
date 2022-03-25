@@ -27,7 +27,7 @@ Resources:
         Type: AWS::Serverless::Function
         Properties:
             Handler: retrieve-prefs.default
-            Runtime: nodejs10.x
+            Runtime: nodejs12.x
             Timeout: 5
             MemorySize: 128
             CodeUri: ./dist/retrieve-prefs
@@ -49,7 +49,7 @@ Resources:
         Type: AWS::Serverless::Function
         Properties:
             Handler: start-save-prefs.default
-            Runtime: nodejs10.x
+            Runtime: nodejs12.x
             Timeout: 3
             MemorySize: 128
             CodeUri: ./dist/start-save-prefs
@@ -71,7 +71,7 @@ Resources:
         Type: AWS::Serverless::Function
         Properties:
             Handler: process-save-prefs.default
-            Runtime: nodejs10.x
+            Runtime: nodejs12.x
             CodeUri: ./dist/process-save-prefs
             MemorySize: 128
             ReservedConcurrentExecutions: 1
