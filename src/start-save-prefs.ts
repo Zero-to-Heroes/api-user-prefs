@@ -1,4 +1,4 @@
-import { Sqs } from './db/sqs';
+import { Sqs } from '@firestone-hs/aws-lambda-utils';
 import { Input } from './sqs-event';
 
 const sqs = new Sqs();

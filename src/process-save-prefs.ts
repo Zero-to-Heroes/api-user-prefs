@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import { getConnection, groupByFunction, logger } from '@firestone-hs/aws-lambda-utils';
 import { ServerlessMysql } from 'serverless-mysql';
 import SqlString from 'sqlstring';
-import { getConnection } from './db/rds';
-import { groupByFunction } from './db/utils';
 import { Input } from './sqs-event';
 
 export default async (event, context): Promise<any> => {
@@ -38,14 +37,14 @@ const extractLatest = (events: readonly Input[]): readonly Input[] => {
 
 const processEvent = async (input: Input, mysql: ServerlessMysql) => {
 	const escape = SqlString.escape;
-	console.debug('handling event', input);
+	logger.debug('handling event', input);
 	const userQuery = `
 		SELECT userId, userName
 		FROM user_mapping
 		WHERE userId = ${escape(input.userId)} OR userName = ${input.userName ? escape(input.userName) : escape('__invalid__')}
 	`;
 	const userMappingDbResults: readonly any[] = await mysql.query(userQuery);
-	console.log(
+	logger.debug(
 		'executed query',
 		userMappingDbResults && userMappingDbResults.length,
 		userMappingDbResults && userMappingDbResults.length > 0 && userMappingDbResults[0],
@@ -68,7 +67,7 @@ const processEvent = async (input: Input, mysql: ServerlessMysql) => {
 			WHERE ${userIdCriteria} ${linkWord} ${userNameCriteria}
 		`;
 		const existingDbResuls: readonly any[] = await mysql.query(existingQuery);
-		console.log(
+		logger.debug(
 			'executed query',
 			existingDbResuls && existingDbResuls.length,
 			existingDbResuls && existingDbResuls.length > 0 && existingDbResuls[0],
@@ -98,7 +97,7 @@ const processEvent = async (input: Input, mysql: ServerlessMysql) => {
 				);
 			`;
 	const insertResults: readonly any[] = await mysql.query(insertQuery);
-	console.log(
+	logger.debug(
 		'executed query',
 		insertResults && insertResults.length,
 		insertResults && insertResults.length > 0 && insertResults[0],

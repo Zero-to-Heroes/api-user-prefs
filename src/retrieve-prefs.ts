@@ -1,11 +1,11 @@
+import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
 import SqlString from 'sqlstring';
 import { gzipSync } from 'zlib';
-import { getConnection } from './db/rds';
 import { Input } from './sqs-event';
 
 export default async (event): Promise<any> => {
 	const input: Input = JSON.parse(event.body);
-	console.debug('handling event', input);
+	logger.debug('handling event', input);
 
 	const mysql = await getConnection();
 
@@ -16,7 +16,7 @@ export default async (event): Promise<any> => {
 		WHERE userId = ${escape(input.userId)} OR userName = ${input.userName ? escape(input.userName) : escape('__invalid__')}
 	`;
 	const userMappingDbResults: readonly any[] = await mysql.query(userQuery);
-	console.log(
+	logger.debug(
 		'executed query',
 		userMappingDbResults && userMappingDbResults.length,
 		userMappingDbResults && userMappingDbResults.length > 0 && userMappingDbResults[0],
