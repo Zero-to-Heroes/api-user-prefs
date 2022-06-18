@@ -1,9 +1,10 @@
-import { Sqs } from '@firestone-hs/aws-lambda-utils';
+import { logBeforeTimeout, Sqs } from '@firestone-hs/aws-lambda-utils';
 import { Input } from './sqs-event';
 
 const sqs = new Sqs();
 
-export default async (event): Promise<any> => {
+export default async (event, context): Promise<any> => {
+	const cleanup = logBeforeTimeout(context);
 	const headers = {
 		'Access-Control-Allow-Headers':
 			'Accept,Accept-Language,Content-Language,Content-Type,Authorization,x-correlation-id,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
@@ -23,6 +24,7 @@ export default async (event): Promise<any> => {
 
 	const input: Input = JSON.parse(event.body);
 	await sqs.sendMessageToQueue(input, process.env.SQS_URL);
+	cleanup();
 	return {
 		statusCode: 200,
 		headers: headers,

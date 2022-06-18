@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { getConnection, groupByFunction, logger } from '@firestone-hs/aws-lambda-utils';
+import { getConnection, groupByFunction, logBeforeTimeout, logger } from '@firestone-hs/aws-lambda-utils';
 import { ServerlessMysql } from 'serverless-mysql';
 import SqlString from 'sqlstring';
 import { Input } from './sqs-event';
 
 export default async (event, context): Promise<any> => {
+	const cleanup = logBeforeTimeout(context);
 	const events: readonly Input[] = (event.Records as any[])
 		.map(event => JSON.parse(event.body))
 		.reduce((a, b) => a.concat(b), [])
@@ -21,6 +22,7 @@ export default async (event, context): Promise<any> => {
 		body: null,
 	};
 	await mysql.end();
+	cleanup();
 	return response;
 };
 

@@ -1,9 +1,10 @@
-import { getConnection, logger } from '@firestone-hs/aws-lambda-utils';
+import { getConnection, logBeforeTimeout, logger } from '@firestone-hs/aws-lambda-utils';
 import SqlString from 'sqlstring';
 import { gzipSync } from 'zlib';
 import { Input } from './sqs-event';
 
-export default async (event): Promise<any> => {
+export default async (event, context): Promise<any> => {
+	const cleanup = logBeforeTimeout(context);
 	const input: Input = JSON.parse(event.body);
 	logger.debug('handling event', input);
 
@@ -25,6 +26,7 @@ export default async (event): Promise<any> => {
 	const userIds = [...new Set(userMappingDbResults.map(result => result.userId).filter(userId => userId?.length))];
 	// First-time user, no mapping registered yet
 	if (!userIds?.length) {
+		cleanup();
 		return {
 			statusCode: 200,
 			// isBase64Encoded: true,
@@ -65,5 +67,6 @@ export default async (event): Promise<any> => {
 		},
 	};
 
+	cleanup();
 	return response;
 };
