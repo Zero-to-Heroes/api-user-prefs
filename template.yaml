@@ -2,16 +2,8 @@
 # Indentation needs to be set with spaces, because YAML...
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: API endpoint to register a userid / username mapping
 
 Globals:
-    Api:
-        # API Gateway regional endpoints
-        EndpointConfiguration: EDGE
-        Cors:
-            AllowMethods: "'*'"
-            AllowHeaders: "'*'"
-            AllowOrigin: "'*'"
     Function:
         Environment:
             Variables:
@@ -23,14 +15,14 @@ Resources:
         Properties:
             QueueName: deferred-save-prefs-queue
             VisibilityTimeout: 601
-    RetrievePrefsFunction:
+    RetrievePrefsFunction2:
         Type: AWS::Serverless::Function
         Properties:
             Handler: retrieve-prefs.default
-            Runtime: nodejs12.x
+            Runtime: nodejs16.x
+            CodeUri: ./dist/retrieve-prefs
             Timeout: 5
             MemorySize: 128
-            CodeUri: ./dist/retrieve-prefs
             Policies:
                 - AWSLambdaVPCAccessExecutionRole
                 - AmazonSESFullAccess
@@ -38,35 +30,29 @@ Resources:
                 - SecretsManagerReadWrite
                 # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
             Tags:
-                LambdaName: api-retrieve-prefs
-            Events:
-                SavePrefsResource:
-                    Type: Api
-                    Properties:
-                        Path: /get/{proxy+}
-                        Method: any
-    StartSavePrefsFunction:
+                LambdaName: api-retrieve-prefs-2
+            AutoPublishAlias: live
+            FunctionUrlConfig:
+                AuthType: NONE
+    StartSavePrefsFunction2:
         Type: AWS::Serverless::Function
         Properties:
             Handler: start-save-prefs.default
-            Runtime: nodejs12.x
+            Runtime: nodejs16.x
+            CodeUri: ./dist/start-save-prefs
             Timeout: 3
             MemorySize: 128
-            CodeUri: ./dist/start-save-prefs
             Policies:
                 - AWSLambdaVPCAccessExecutionRole
                 - AmazonSESFullAccess
                 - AmazonSQSFullAccess
                 - SecretsManagerReadWrite
-                - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
+                # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
             Tags:
-                LambdaName: api-start-save-prefs
-            Events:
-                SavePrefsResource:
-                    Type: Api
-                    Properties:
-                        Path: /post/{proxy+}
-                        Method: any
+                LambdaName: api-start-save-prefs-2
+            AutoPublishAlias: live
+            FunctionUrlConfig:
+                AuthType: NONE
     ProcessSavePrefsFunction:
         Type: AWS::Serverless::Function
         Properties:
@@ -90,10 +76,3 @@ Resources:
                     Properties:
                         Queue: !GetAtt SavePrefsQueue.Arn
                         # BatchSize: 1
-
-Outputs:
-    SavePrefsApi:
-        Description: URL to save prefs
-        Value: !Sub 'https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/preferences'
-        Export:
-            Name: SavePrefsApi
