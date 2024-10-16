@@ -23,9 +23,12 @@ export default async (event, context): Promise<any> => {
 		userMappingDbResults && userMappingDbResults.length > 0 && userMappingDbResults[0],
 	);
 
-	const userIds = [...new Set(userMappingDbResults.map(result => result.userId).filter(userId => userId?.length))];
+	const userIds = [
+		...new Set(userMappingDbResults.map((result) => result.userId).filter((userId) => userId?.length)),
+	];
 	// First-time user, no mapping registered yet
 	if (!userIds?.length) {
+		await mysql.end();
 		cleanup();
 		return {
 			statusCode: 200,
@@ -38,14 +41,14 @@ export default async (event, context): Promise<any> => {
 		};
 	}
 
-	const userNames = [...new Set(userMappingDbResults.map(result => result.userName))]
-		.filter(userName => userName != '__invalid')
-		.filter(userName => userName?.length && userName.length > 0);
-	const userIdCriteria = `userId IN (${userIds.map(userId => escape(userId)).join(',')})`;
+	const userNames = [...new Set(userMappingDbResults.map((result) => result.userName))]
+		.filter((userName) => userName != '__invalid')
+		.filter((userName) => userName?.length && userName.length > 0);
+	const userIdCriteria = `userId IN (${userIds.map((userId) => escape(userId)).join(',')})`;
 	const linkWord = userIds.length > 0 && userNames.length > 0 ? 'OR ' : '';
 
 	const userNameCriteria =
-		userNames.length > 0 ? `userName IN (${userNames.map(result => escape(result)).join(',')})` : '';
+		userNames.length > 0 ? `userName IN (${userNames.map((result) => escape(result)).join(',')})` : '';
 	const existingQuery = `
 		SELECT prefs 
 		FROM user_prefs
